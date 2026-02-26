@@ -1,0 +1,29 @@
+[project]
+name = "guudvision-stock-monitor"
+version = "0.1.0"
+description = "Automated lens stock monitoring and alerting system for Guud Health mobile units"
+requires-python = ">=3.11"
+
+dependencies = [
+    "httpx",
+    "supabase",
+    "pandas",
+    "openpyxl",
+    "python-dotenv",
+    "apscheduler",
+    "sendgrid",
+    "requests",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "pytest",
+]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+line-length = 88
