@@ -78,12 +78,11 @@ def save_excel(df):
     wb = load_workbook(filename)
     red_fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")
 
-    for sheet_name in ["Alerts", "Full Report"]:
-        ws = wb[sheet_name]
-        for row in ws.iter_rows(min_row=2, max_row=ws.max_row):
-            if row[-1].value == "Yes":
-                for cell in row:
-                    cell.fill = red_fill
+    ws = wb["Full Report"]
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row):
+        if row[-1].value == "Yes":
+            for cell in row:
+                cell.fill = red_fill
 
     wb.save(filename)
     return filename
