@@ -3,7 +3,7 @@
 from datetime import date
 import pandas as pd
 from supabase import create_client
-from stock_monitor.config import SUPABASE_URL, SUPABASE_KEY, EMAIL_SENDER, EMAIL_RECIPIENT, SENDGRID_API_KEY
+from stock_monitor.config import SUPABASE_URL, SUPABASE_KEY, EMAIL_SENDER, EMAIL_RECIPIENT, SENDGRID_API_KEY, STORE_NAMES
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -47,6 +47,7 @@ def build_report():
         axis=1
     )
     merged["below_threshold"] = merged["quantity_eod"] < merged["threshold"]
+    merged["store_id"] = merged["store_id"].map(STORE_NAMES) 
 
     return merged[[
         "store_id",
