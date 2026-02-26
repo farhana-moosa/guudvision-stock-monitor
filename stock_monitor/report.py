@@ -63,19 +63,22 @@ def build_report():
 def save_excel(df):
     from openpyxl import load_workbook
     from openpyxl.styles import PatternFill
-
-    filename = f"stock_report_{date.today().isoformat()}.xlsx"
+    from io import BytesIO
 
     df = df.copy()
     df["below_threshold"] = df["below_threshold"].map({True: "Yes", False: "No"})
 
     alerts_df = df[df["below_threshold"] == "Yes"]
 
-    with pd.ExcelWriter(filename, engine="openpyxl") as writer:
+    buffer = BytesIO()
+
+    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
         alerts_df.to_excel(writer, sheet_name="Alerts", index=False)
         df.to_excel(writer, sheet_name="Full Report", index=False)
 
-    wb = load_workbook(filename)
+    buffer.seek(0)
+
+    wb = load_workbook(buffer)
     red_fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")
 
     ws = wb["Full Report"]
@@ -84,17 +87,18 @@ def save_excel(df):
             for cell in row:
                 cell.fill = red_fill
 
-    wb.save(filename)
-    return filename
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return output
 
-
-def send_email(filename):
+def send_email(buffer):
     from sendgrid import SendGridAPIClient
     from sendgrid.helpers.mail import Mail, Attachment, FileContent, FileName, FileType, Disposition
     import base64
 
-    with open(filename, "rb") as f:
-        encoded = base64.b64encode(f.read()).decode()
+    encoded = base64.b64encode(buffer.read()).decode()
+    filename = f"stock_report_{date.today().isoformat()}.xlsx"
 
     attachment = Attachment(
         FileContent(encoded),
@@ -118,5 +122,5 @@ def send_email(filename):
 
 def run_report():
     df = build_report()
-    filename = save_excel(df)
-    send_email(filename)
+    buffer = save_excel(df)
+    send_email(buffer)
