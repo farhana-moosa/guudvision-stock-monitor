@@ -1,0 +1,60 @@
+name: Lens Stock Monitor
+
+on:
+  schedule:
+    - cron: '0 5 * * *'    # 7am SAST - morning snapshot
+    - cron: '0 15 * * *'   # 5pm SAST - EOD snapshot
+    - cron: '0 7 * * *'    # 9am SAST - send report
+  workflow_dispatch:
+    inputs:
+      job:
+        description: 'Job to run: morning_snapshot, eod_snapshot, send_report'
+        required: true
+        default: 'send_report'
+
+env:
+  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+  ITRUST_BASE_URL: ${{ secrets.ITRUST_BASE_URL }}
+  ITRUST_API_KEY: ${{ secrets.ITRUST_API_KEY }}
+  ITRUST_SUITE_NAME: ${{ secrets.ITRUST_SUITE_NAME }}
+  STORE_IDS: ${{ secrets.STORE_IDS }}
+  EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
+  EMAIL_RECIPIENT: ${{ secrets.EMAIL_RECIPIENT }}
+  SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+  MORNING_RUN_HOUR: ${{ secrets.MORNING_RUN_HOUR }}
+  EOD_RUN_HOUR: ${{ secrets.EOD_RUN_HOUR }}
+
+jobs:
+  morning-snapshot:
+    runs-on: ubuntu-latest
+    if: github.event.schedule == '0 5 * * *' || (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'morning_snapshot')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -e ".[dev]"
+      - run: python -c "from stock_monitor.snapshot import take_snapshot; take_snapshot('morning')"
+
+  eod-snapshot:
+    runs-on: ubuntu-latest
+    if: github.event.schedule == '0 15 * * *' || (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'eod_snapshot')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -e ".[dev]"
+      - run: python -c "from stock_monitor.snapshot import take_snapshot; take_snapshot('eod')"
+
+  send-report:
+    runs-on: ubuntu-latest
+    if: github.event.schedule == '0 7 * * *' || (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'send_report')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -e ".[dev]"
+      - run: python -c "from stock_monitor.report import run_report; run_report()"
