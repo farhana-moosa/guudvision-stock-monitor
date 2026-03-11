@@ -47,6 +47,7 @@ def build_report():
         axis=1
     )
     merged["below_threshold"] = merged["quantity_eod"] < merged["threshold"]
+    merged["to_reach_threshold"] = (merged["threshold"] - merged["quantity_eod"]).clip(lower=0)
     merged["store_id"] = merged["store_id"].map(STORE_NAMES) 
 
     return merged[[
@@ -57,7 +58,8 @@ def build_report():
         "quantity_eod",
         "consumed",
         "threshold",
-        "below_threshold"
+        "below_threshold",
+        "to_reach_threshold"
     ]]
 
 
@@ -83,8 +85,11 @@ def save_excel(df):
     red_fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")
 
     ws = wb["Full Report"]
+    header = [ws.cell(1, col).value for col in range(1, ws.max_column + 1)]
+    bt_col = header.index("below_threshold") + 1
+
     for row in ws.iter_rows(min_row=2, max_row=ws.max_row):
-        if row[-1].value == "Yes":
+        if ws.cell(row[0].row, bt_col).value == "Yes":
             for cell in row:
                 cell.fill = red_fill
 
