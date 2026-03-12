@@ -14,7 +14,7 @@ def morning_job():
 def eod_job():
     print("Running EOD snapshot...")
     take_snapshot("eod")
-    run_report()
+    # run_report()
 
 scheduler.add_job(morning_job, "cron", hour=MORNING_RUN_HOUR, minute=0)
 scheduler.add_job(eod_job, "cron", hour=EOD_RUN_HOUR, minute=0)
