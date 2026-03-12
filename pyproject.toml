@@ -13,6 +13,7 @@ dependencies = [
     "apscheduler",
     "sendgrid",
     "requests",
+    "streamlit"
 ]
 
 [project.optional-dependencies]

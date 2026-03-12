@@ -12,7 +12,7 @@ ITRUST_BASE_URL = os.getenv("ITRUST_BASE_URL", "")
 ITRUST_API_KEY = os.getenv("ITRUST_API_KEY", "")
 
 # Store IDs
-STORE_IDS = os.getenv("STORE_IDS", "").split(",")
+STORE_IDS = [s.strip() for s in os.getenv("STORE_IDS", "").split(",")]
 STORE_NAMES = {
     "2": "Guud Mobile 12 (RAF 1)",
     "3": "Guud Mobile 11 (RAF 3)",
