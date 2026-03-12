@@ -81,9 +81,9 @@ df["to_reach_threshold"] = (df["threshold"] - df["quantity"]).clip(lower=0)
 
 df["sphere"] = df["sphere"].round(2)
 df["cylinder"] = df["cylinder"].round(2)
-df["quantity"] = df["quantity"].astype(int)
+df["quantity"] = df["quantity"].fillna(0).astype(int)
 df["threshold"] = df["threshold"].fillna(0).astype(int)
-df["to_reach_threshold"] = df["to_reach_threshold"].astype(int)
+df["to_reach_threshold"] = df["to_reach_threshold"].fillna(0).astype(int)
 
 st.caption(f"Showing stock data for: {df['snapshot_date'].iloc[0]}")
 
