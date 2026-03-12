@@ -5,8 +5,25 @@ import pandas as pd
 from stock_monitor.config import SUPABASE_URL, SUPABASE_KEY, STORE_NAMES
 from supabase import create_client
 
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+supabase = create_client(
+    st.secrets["SUPABASE_URL"],
+    st.secrets["SUPABASE_KEY"]
+)
 
+def check_password():
+    if "authenticated" not in st.session_state:
+        st.session_state.authenticated = False
+
+    if not st.session_state.authenticated:
+        st.title("Guud Vision Stock Monitor")
+        password = st.text_input("Enter password", type="password")
+        if st.button("Login"):
+            if password == st.secrets["APP_PASSWORD"]:
+                st.session_state.authenticated = True
+                st.rerun()
+            else:
+                st.error("Incorrect password")
+        st.stop()
 
 def get_latest_snapshots():
     response = (
@@ -38,6 +55,7 @@ def get_thresholds():
         for row in response.data
     }
 
+check_password()
 
 st.set_page_config(page_title="Guud Vision Stock Monitor", layout="wide")
 st.title("Guud Vision Stock Monitor")
@@ -57,6 +75,11 @@ df["threshold"] = df.apply(
 df["below_threshold"] = df["quantity"] < df["threshold"]
 df["to_reach_threshold"] = (df["threshold"] - df["quantity"]).clip(lower=0)
 
+df["sphere"] = df["sphere"].round(2)
+df["cylinder"] = df["cylinder"].round(2)
+df["quantity"] = df["quantity"].astype(int)
+df["threshold"] = df["threshold"].astype(int)
+df["to_reach_threshold"] = df["to_reach_threshold"].astype(int)
 
 st.caption(f"Showing stock data for: {df['snapshot_date'].iloc[0]}")
 
