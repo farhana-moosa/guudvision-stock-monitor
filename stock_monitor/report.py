@@ -3,7 +3,7 @@
 from datetime import date
 import pandas as pd
 from supabase import create_client
-from stock_monitor.config import SUPABASE_URL, SUPABASE_KEY, EMAIL_SENDER, EMAIL_RECIPIENT, SENDGRID_API_KEY, STORE_NAMES
+#from stock_monitor.config import SUPABASE_URL, SUPABASE_KEY, EMAIL_SENDER, EMAIL_RECIPIENT, SENDGRID_API_KEY, STORE_NAMES
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -48,7 +48,7 @@ def build_report():
     )
     merged["below_threshold"] = merged["quantity_eod"] < merged["threshold"]
     merged["to_reach_threshold"] = (merged["threshold"] - merged["quantity_eod"]).clip(lower=0)
-    merged["store_id"] = merged["store_id"].map(STORE_NAMES) 
+    merged["store_id"] = merged["store_id"].astype(str).map(STORE_NAMES)
 
     return merged[[
         "store_id",
@@ -98,32 +98,32 @@ def save_excel(df):
     output.seek(0)
     return output
 
-def send_email(buffer):
-    from sendgrid import SendGridAPIClient
-    from sendgrid.helpers.mail import Mail, Attachment, FileContent, FileName, FileType, Disposition
-    import base64
+# def send_email(buffer):
+#     from sendgrid import SendGridAPIClient
+#     from sendgrid.helpers.mail import Mail, Attachment, FileContent, FileName, FileType, Disposition
+#     import base64
 
-    encoded = base64.b64encode(buffer.read()).decode()
-    filename = f"stock_report_{date.today().isoformat()}.xlsx"
+#     encoded = base64.b64encode(buffer.read()).decode()
+#     filename = f"stock_report_{date.today().isoformat()}.xlsx"
 
-    attachment = Attachment(
-        FileContent(encoded),
-        FileName(filename),
-        FileType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
-        Disposition("attachment")
-    )
+#     attachment = Attachment(
+#         FileContent(encoded),
+#         FileName(filename),
+#         FileType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+#         Disposition("attachment")
+#     )
 
-    message = Mail(
-        from_email=EMAIL_SENDER,
-        to_emails=EMAIL_RECIPIENT,
-        subject=f"Lens Stock Report - {date.today().isoformat()}",
-        plain_text_content="Please find attached today's lens stock report for the SIOC mobiles."
-    )
-    message.attachment = attachment
+#     message = Mail(
+#         from_email=EMAIL_SENDER,
+#         to_emails=EMAIL_RECIPIENT,
+#         subject=f"Lens Stock Report - {date.today().isoformat()}",
+#         plain_text_content="Please find attached today's lens stock report for the SIOC mobiles."
+#     )
+#     message.attachment = attachment
 
-    sg = SendGridAPIClient(SENDGRID_API_KEY)
-    response = sg.send(message)
-    print(f"Email sent, status code: {response.status_code}")
+#     sg = SendGridAPIClient(SENDGRID_API_KEY)
+#     response = sg.send(message)
+#     print(f"Email sent, status code: {response.status_code}")
 
 
 def run_report():
