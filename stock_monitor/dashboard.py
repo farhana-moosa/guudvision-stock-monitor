@@ -2,12 +2,12 @@
 
 import sys
 import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import pandas as pd
 import streamlit as st
 from stock_monitor.config import SUPABASE_URL, SUPABASE_KEY, STORE_NAMES
 from supabase import create_client
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 supabase = create_client(
     st.secrets["SUPABASE_URL"],
