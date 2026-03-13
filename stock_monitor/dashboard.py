@@ -59,12 +59,35 @@ def get_thresholds():
         for row in response.data
     }
 
+def get_latest_frame_snapshots():
+    response = (
+        supabase.table("frame_snapshots")
+        .select("*")
+        .order("snapshot_date", desc=True)
+        .limit(1)
+        .execute()
+    )
+    if not response.data:
+        return None
+
+    latest_date = response.data[0]["snapshot_date"]
+
+    response = (
+        supabase.table("frame_snapshots")
+        .select("*")
+        .eq("snapshot_date", latest_date)
+        .eq("snapshot_type", "morning")
+        .execute()
+    )
+    return pd.DataFrame(response.data)
+
 check_password()
 
 st.set_page_config(page_title="Guud Vision Stock Monitor", layout="wide")
 st.title("Guud Vision Stock Monitor")
 
 df = get_latest_snapshots()
+frames_df = get_latest_frame_snapshots()
 
 if df is None:
     st.warning("No stock data available yet.")
@@ -108,11 +131,16 @@ selected_store = st.selectbox("Select Mobile", store_options)
 # filter by selected store
 if selected_store == "All Mobiles":
     filtered_df = df
+    filtered_frames_df = frames_df if frames_df is not None else None
 else:
     filtered_df = df[df["store_name"] == selected_store]
+    if frames_df is not None:
+        filtered_frames_df = frames_df[frames_df["store_id"].astype(str).map(STORE_NAMES) == selected_store]
+    else:
+        filtered_frames_df = None
 
 # tabs
-tab1, tab2 = st.tabs(["Alerts", "Full Stock View"])
+tab1, tab2, tab3 = st.tabs(["Alerts", "Lens Stock", "Frame Stock"])
 
 with tab1:
     alerts = filtered_df[filtered_df["below_threshold"] == True][[
@@ -149,3 +177,21 @@ with tab2:
         use_container_width=True,
         hide_index=True
     )
+
+with tab3:
+    if filtered_frames_df is None or filtered_frames_df.empty:
+        st.info("No frame stock data available.")
+    else:
+        frames = filtered_frames_df[[
+            "store_id", "brand", "model", "color", "amount_on_hand"
+        ]].copy()
+        frames["store_id"] = frames["store_id"].astype(str).map(STORE_NAMES)
+        frames = frames.rename(columns={
+            "store_id": "Mobile",
+            "brand": "Brand",
+            "model": "Model",
+            "color": "Color",
+            "amount_on_hand": "Amount on Hand"
+        })
+        st.subheader(f"Frame Stock ({len(frames)} frames)")
+        st.dataframe(frames, use_container_width=True, hide_index=True)
