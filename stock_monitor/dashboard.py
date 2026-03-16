@@ -51,6 +51,28 @@ def get_latest_snapshots():
     )
     return pd.DataFrame(response.data)
 
+def get_all_snapshots(snapshot_type):
+    all_rows = []
+    page_size = 1000
+    start = 0
+
+    while True:
+        response = (
+            supabase.table("stock_snapshots")
+            .select("*")
+            .eq("snapshot_type", snapshot_type)
+            .order("snapshot_date", desc=False)
+            .range(start, start + page_size - 1)
+            .execute()
+        )
+        if not response.data:
+            break
+        all_rows.extend(response.data)
+        if len(response.data) < page_size:
+            break
+        start += page_size
+
+    return pd.DataFrame(all_rows)
 
 def get_thresholds():
     response = supabase.table("prescription_thresholds").select("*").execute()
@@ -81,6 +103,20 @@ def get_latest_frame_snapshots():
     )
     return pd.DataFrame(response.data)
 
+def calculate_consumption(all_snapshots_df):
+    df = all_snapshots_df.copy()
+    df["store_name"] = df["store_id"].astype(str).map(STORE_NAMES)
+    
+    df = df.sort_values("snapshot_date")
+    
+    df["consumed"] = df.groupby(
+        ["store_id", "sphere", "cylinder"]
+    )["quantity"].diff(-1)
+    
+    df["consumed"] = df["consumed"].clip(lower=0).fillna(0).astype(int)
+    
+    return df
+
 check_password()
 
 st.set_page_config(page_title="Guud Vision Stock Monitor", layout="wide")
@@ -88,6 +124,8 @@ st.title("Guud Vision Stock Monitor")
 
 df = get_latest_snapshots()
 frames_df = get_latest_frame_snapshots()
+all_snapshots_df = get_all_snapshots("morning")
+consumption_df = calculate_consumption(all_snapshots_df)
 
 if df is None:
     st.warning("No stock data available yet.")
@@ -140,7 +178,7 @@ else:
         filtered_frames_df = None
 
 # tabs
-tab1, tab2, tab3 = st.tabs(["Alerts", "Lens Stock", "Frame Stock"])
+tab1, tab2, tab3, tab4 = st.tabs(["Alerts", "Lens Stock", "Frame Stock", "Consumption Trends"])
 
 with tab1:
     alerts = filtered_df[filtered_df["below_threshold"] == True][[
@@ -195,3 +233,28 @@ with tab3:
         })
         st.subheader(f"Frame Stock ({len(frames)} frames)")
         st.dataframe(frames, use_container_width=True, hide_index=True)
+
+with tab4:
+    if consumption_df is None or consumption_df.empty:
+        st.info("No consumption data available yet.")
+    else:
+        st.subheader("Daily Lens Consumption by Mobile")
+        
+        # filter by selected store
+        if selected_store == "All Mobiles":
+            filtered_consumption = consumption_df
+        else:
+            filtered_consumption = consumption_df[consumption_df["store_name"] == selected_store]
+        
+        consumption_display = filtered_consumption[[
+            "snapshot_date", "store_name", "sphere", "cylinder", "quantity", "consumed"
+        ]].rename(columns={
+            "snapshot_date": "Date",
+            "store_name": "Mobile",
+            "sphere": "Sphere",
+            "cylinder": "Cylinder",
+            "quantity": "Stock Level",
+            "consumed": "Consumed"
+        })
+        
+        st.dataframe(consumption_display, use_container_width=True, hide_index=True)
