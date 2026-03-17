@@ -26,8 +26,8 @@ STORE_NAMES = {
     "11": "Guud Mobile 2 (GM2)",
     "12": "Guud Mobile 3 (GM3)",
     "13": "Guud Mobile 10 (GM10)",
-    "14": "Guud Vision Clinic",
-    "1": "LAB"
+    "14": "Guud Vision Clinic"
+    # "1": "LAB"
 }
 
 # Schedule
