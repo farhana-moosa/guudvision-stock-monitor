@@ -6,7 +6,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pandas as pd
 import streamlit as st
-from stock_monitor.config import SUPABASE_URL, SUPABASE_KEY, STORE_NAMES
+from stock_monitor.config import STORE_NAMES
 from supabase import create_client
 
 supabase = create_client(
@@ -14,21 +14,170 @@ supabase = create_client(
     st.secrets["SUPABASE_KEY"]
 )
 
+# ── Custom CSS ────────────────────────────────────────────────────────────────
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+html, body, [class*="css"] {
+    font-family: 'DM Sans', sans-serif;
+}
+
+/* Page background */
+.stApp {
+    background-color: #F7F8FA;
+}
+
+/* Header bar */
+.dashboard-header {
+    background: linear-gradient(135deg, #1B2A4A 0%, #2D4270 100%);
+    border-radius: 12px;
+    padding: 28px 36px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.dashboard-header h1 {
+    color: #FFFFFF;
+    font-size: 1.6rem;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: -0.3px;
+}
+.dashboard-header p {
+    color: #8FA8D8;
+    font-size: 0.82rem;
+    margin: 4px 0 0 0;
+    font-family: 'DM Mono', monospace;
+}
+
+/* Metric cards */
+.metric-card {
+    background: #FFFFFF;
+    border-radius: 10px;
+    padding: 20px 24px;
+    border: 1px solid #E8ECF2;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.metric-label {
+    color: #7A8BA6;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 8px;
+}
+.metric-value {
+    color: #1B2A4A;
+    font-size: 2rem;
+    font-weight: 600;
+    line-height: 1;
+}
+.metric-value.alert {
+    color: #D94F4F;
+}
+.metric-value.date {
+    font-size: 1.1rem;
+    font-family: 'DM Mono', monospace;
+    color: #2D4270;
+}
+
+/* Section headers */
+.section-header {
+    color: #1B2A4A;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #E8ECF2;
+}
+
+/* Login page */
+.login-container {
+    max-width: 400px;
+    margin: 80px auto;
+    background: white;
+    border-radius: 16px;
+    padding: 48px 40px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    border: 1px solid #E8ECF2;
+}
+.login-title {
+    color: #1B2A4A;
+    font-size: 1.4rem;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 8px;
+}
+.login-subtitle {
+    color: #7A8BA6;
+    font-size: 0.85rem;
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+/* Hide streamlit branding */
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
+
+/* Selectbox styling */
+.stSelectbox > div > div {
+    background: white;
+    border: 1px solid #E8ECF2;
+    border-radius: 8px;
+}
+
+/* Tab styling */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 4px;
+    background: #EBEEF4;
+    padding: 4px;
+    border-radius: 10px;
+}
+.stTabs [data-baseweb="tab"] {
+    border-radius: 7px;
+    padding: 8px 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #7A8BA6;
+}
+.stTabs [aria-selected="true"] {
+    background: white !important;
+    color: #1B2A4A !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+# ── Auth ──────────────────────────────────────────────────────────────────────
 def check_password():
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
 
     if not st.session_state.authenticated:
-        st.title("Guud Vision Stock Monitor")
-        password = st.text_input("Enter password", type="password")
-        if st.button("Login"):
-            if password == st.secrets["APP_PASSWORD"]:
-                st.session_state.authenticated = True
-                st.rerun()
-            else:
-                st.error("Incorrect password")
+        st.markdown("""
+        <div class="login-container">
+            <div class="login-title">Guud Vision</div>
+            <div class="login-subtitle">Stock Monitor — Secure Access</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            password = st.text_input("Password", type="password", label_visibility="collapsed", placeholder="Enter password")
+            if st.button("Sign In", use_container_width=True):
+                if password == st.secrets["APP_PASSWORD"]:
+                    st.session_state.authenticated = True
+                    st.rerun()
+                else:
+                    st.error("Incorrect password")
         st.stop()
 
+
+# ── Data fetching ─────────────────────────────────────────────────────────────
 def get_latest_snapshots():
     response = (
         supabase.table("stock_snapshots")
@@ -39,9 +188,7 @@ def get_latest_snapshots():
     )
     if not response.data:
         return None
-
     latest_date = response.data[0]["snapshot_date"]
-
     response = (
         supabase.table("stock_snapshots")
         .select("*")
@@ -51,11 +198,11 @@ def get_latest_snapshots():
     )
     return pd.DataFrame(response.data)
 
+
 def get_all_snapshots(snapshot_type):
     all_rows = []
     page_size = 1000
     start = 0
-
     while True:
         response = (
             supabase.table("stock_snapshots")
@@ -71,8 +218,8 @@ def get_all_snapshots(snapshot_type):
         if len(response.data) < page_size:
             break
         start += page_size
-
     return pd.DataFrame(all_rows)
+
 
 def get_thresholds():
     response = supabase.table("prescription_thresholds").select("*").execute()
@@ -80,6 +227,7 @@ def get_thresholds():
         (row["sphere"], row["cylinder"]): row["threshold"]
         for row in response.data
     }
+
 
 def get_latest_frame_snapshots():
     response = (
@@ -91,9 +239,7 @@ def get_latest_frame_snapshots():
     )
     if not response.data:
         return None
-
     latest_date = response.data[0]["snapshot_date"]
-
     response = (
         supabase.table("frame_snapshots")
         .select("*")
@@ -103,25 +249,24 @@ def get_latest_frame_snapshots():
     )
     return pd.DataFrame(response.data)
 
+
 def calculate_consumption(all_snapshots_df):
     df = all_snapshots_df.copy()
     df["store_name"] = df["store_id"].astype(str).map(STORE_NAMES)
-    
     df = df.sort_values("snapshot_date")
-    
     df["consumed"] = df.groupby(
         ["store_id", "sphere", "cylinder"]
     )["quantity"].diff(-1)
-    
     df["consumed"] = df["consumed"].clip(lower=0).fillna(0).astype(int)
-    
     return df
 
+
+# ── App ───────────────────────────────────────────────────────────────────────
 check_password()
 
 st.set_page_config(page_title="Guud Vision Stock Monitor", layout="wide")
-st.title("Guud Vision Stock Monitor")
 
+# load data
 df = get_latest_snapshots()
 frames_df = get_latest_frame_snapshots()
 all_snapshots_df = get_all_snapshots("morning")
@@ -139,34 +284,58 @@ df["threshold"] = df.apply(
 )
 df["below_threshold"] = df["quantity"] < df["threshold"]
 df["to_reach_threshold"] = (df["threshold"] - df["quantity"]).clip(lower=0)
-
 df["sphere"] = df["sphere"].round(2)
 df["cylinder"] = df["cylinder"].round(2)
+pd.set_option("display.float_format", "{:.2f}".format)
 df["quantity"] = df["quantity"].fillna(0).astype(int)
 df["threshold"] = df["threshold"].fillna(0).astype(int)
 df["to_reach_threshold"] = df["to_reach_threshold"].fillna(0).astype(int)
-
-st.caption(f"Showing stock data for: {df['snapshot_date'].iloc[0]}")
-
-# metrics row
-col1, col2, col3 = st.columns(3)
 
 total_alerts = len(df[df["below_threshold"] == True])
 mobiles_affected = df[df["below_threshold"] == True]["store_name"].nunique()
 last_updated = df["snapshot_date"].iloc[0]
 
+# header
+st.markdown(f"""
+<div class="dashboard-header">
+    <div>
+        <h1>Guud Vision Stock Monitor</h1>
+        <p>Data refreshes every morning at 07:00 SAST · Last snapshot: {last_updated}</p>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+# metrics
+col1, col2, col3 = st.columns(3)
 with col1:
-    st.metric("Total Alerts", total_alerts)
+    st.markdown(f"""
+    <div class="metric-card">
+        <div class="metric-label">Total Alerts</div>
+        <div class="metric-value alert">{total_alerts}</div>
+    </div>
+    """, unsafe_allow_html=True)
 with col2:
-    st.metric("Mobiles Affected", mobiles_affected)
+    st.markdown(f"""
+    <div class="metric-card">
+        <div class="metric-label">Mobiles Affected</div>
+        <div class="metric-value">{mobiles_affected}</div>
+    </div>
+    """, unsafe_allow_html=True)
 with col3:
-    st.metric("Last Updated", last_updated)
+    st.markdown(f"""
+    <div class="metric-card">
+        <div class="metric-label">Last Updated</div>
+        <div class="metric-value date">{last_updated}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+st.markdown("<div style='margin-top: 24px'></div>", unsafe_allow_html=True)
 
 # mobile selector
 store_options = ["All Mobiles"] + [v for v in STORE_NAMES.values()]
-selected_store = st.selectbox("Select Mobile", store_options)
+selected_store = st.selectbox("Filter by Mobile", store_options)
 
-# filter by selected store
+# filter
 if selected_store == "All Mobiles":
     filtered_df = df
     filtered_frames_df = frames_df if frames_df is not None else None
@@ -177,8 +346,10 @@ else:
     else:
         filtered_frames_df = None
 
+st.markdown("<div style='margin-top: 8px'></div>", unsafe_allow_html=True)
+
 # tabs
-tab1, tab2, tab3, tab4 = st.tabs(["Alerts", "Lens Stock", "Frame Stock", "Consumption Trends"])
+tab1, tab2, tab3, tab4 = st.tabs(["⚠️ Alerts", "🔵 Lens Stock", "🟤 Frame Stock", "📈 Consumption Trends"])
 
 with tab1:
     alerts = filtered_df[filtered_df["below_threshold"] == True][[
@@ -191,7 +362,7 @@ with tab1:
         "threshold": "Threshold",
         "to_reach_threshold": "Units to Order"
     })
-    st.subheader(f"Prescriptions Below Threshold ({len(alerts)})")
+    st.markdown(f'<div class="section-header">Prescriptions Below Threshold — {len(alerts)} alerts</div>', unsafe_allow_html=True)
     st.dataframe(alerts, use_container_width=True, hide_index=True)
 
 with tab2:
@@ -206,12 +377,12 @@ with tab2:
         "below_threshold": "Below Threshold",
         "to_reach_threshold": "Units to Order"
     })
-    st.subheader(f"Full Stock View ({len(full)} prescriptions)")
+    st.markdown(f'<div class="section-header">Lens Stock — {len(full)} prescriptions</div>', unsafe_allow_html=True)
     st.dataframe(
-        full.style.apply(
-            lambda row: ["background-color: #FFCCCC" if row["Below Threshold"] == True else "" for _ in row],
-            axis=1
-        ),
+    full.style.apply(
+        lambda row: ["background-color: #FDEAEA" if row["Below Threshold"] == True else "" for _ in row],
+        axis=1
+    ).format({"Sphere": "{:.2f}", "Cylinder": "{:.2f}"}),
         use_container_width=True,
         hide_index=True
     )
@@ -231,21 +402,18 @@ with tab3:
             "color": "Color",
             "amount_on_hand": "Amount on Hand"
         })
-        st.subheader(f"Frame Stock ({len(frames)} frames)")
+        st.markdown(f'<div class="section-header">Frame Stock — {len(frames)} frames</div>', unsafe_allow_html=True)
         st.dataframe(frames, use_container_width=True, hide_index=True)
 
 with tab4:
     if consumption_df is None or consumption_df.empty:
         st.info("No consumption data available yet.")
     else:
-        st.subheader("Daily Lens Consumption by Mobile")
-        
-        # filter by selected store
         if selected_store == "All Mobiles":
             filtered_consumption = consumption_df
         else:
             filtered_consumption = consumption_df[consumption_df["store_name"] == selected_store]
-        
+
         consumption_display = filtered_consumption[[
             "snapshot_date", "store_name", "sphere", "cylinder", "quantity", "consumed"
         ]].rename(columns={
@@ -256,5 +424,5 @@ with tab4:
             "quantity": "Stock Level",
             "consumed": "Consumed"
         })
-        
+        st.markdown('<div class="section-header">Daily Lens Consumption by Mobile</div>', unsafe_allow_html=True)
         st.dataframe(consumption_display, use_container_width=True, hide_index=True)
