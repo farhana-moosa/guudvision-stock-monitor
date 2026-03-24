@@ -14,6 +14,10 @@ def take_snapshot(snapshot_type):
         print(f"Pulling stock for store {store_id}...")
         lenses = get_store_stock(store_id)
 
+        if not lenses:
+            print(f"No lens data for store {store_id}, skipping...")
+            continue
+
         rows = [
             {
                 "store_id": store_id,
